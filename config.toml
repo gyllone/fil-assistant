@@ -1,0 +1,6 @@
+EndPoint = "http://117.131.118.78:57655/rpc/v0"
+ApiToken = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiXX0.u0CuLrmSKdPi0WCiJNkJJYVDvOe7dvMzrcaHumHJxqU"
+AESKey = ""
+MaxFee = "0.1 FIL"
+GasFeeCap = "10000000000"
+Confidence = 2
