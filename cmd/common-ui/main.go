@@ -346,29 +346,32 @@ func changeWorker() fyne.CanvasObject {
 		}
 		defer globalVar.Locker.Unlock()
 
+		if globalVar.Handler == nil {
+			globalVar.Msg(common.Error, "初始化异常")
+			return
+		}
+
 		if minerEntry.Text == "" || workerEntry.Text == "" || pkEntry.Text == "" {
 			globalVar.Msg(common.Warn, "输入为空")
 			return
 		}
 
 		controls := strings.Split(controlsEntry.Text, "\n")
-		if len(controls) == 0 {
-			globalVar.Msg(common.Warn, "control地址输入有误")
-			return
+		newControls := make([]string, 0, len(controls))
+		for _, control := range controls {
+			if newControl := strings.TrimSpace(control); newControl != "" {
+				newControls = append(newControls, newControl)
+			}
 		}
-		for i, control := range controls {
-			controls[i] = strings.TrimSpace(control)
-		}
-
-		if globalVar.Handler == nil {
-			globalVar.Msg(common.Error, "初始化异常")
+		if len(newControls) == 0 {
+			globalVar.Msg(common.Warn, "controls地址输入有误")
 			return
 		}
 
 		globalVar.Process.Set(0)
 
 		err := globalVar.Handler.ProposeChangeWorker(context.TODO(), strings.TrimSpace(pkEntry.Text),
-			strings.TrimSpace(minerEntry.Text), strings.TrimSpace(workerEntry.Text), controls, nil)
+			strings.TrimSpace(minerEntry.Text), strings.TrimSpace(workerEntry.Text), newControls, nil)
 		if err != nil {
 			globalVar.Msg(common.Warn, err.Error())
 		} else {

@@ -72,7 +72,7 @@ func createMsig() fyne.CanvasObject {
 	pk.PlaceHolder = "私钥"
 
 	signers := widget.NewMultiLineEntry()
-	signers.PlaceHolder = "成员地址"
+	signers.PlaceHolder = "signers地址"
 
 	threshold := widget.NewEntry()
 	threshold.PlaceHolder = "投票阈值"
@@ -101,17 +101,20 @@ func createMsig() fyne.CanvasObject {
 		}
 
 		signers := strings.Split(signers.Text, "\n")
-		if len(signers) == 0 {
-			globalVar.Msg(common.Warn, "成员地址输入有误")
-			return
+		newSigners := make([]string, 0, len(signers))
+		for _, signer := range signers {
+			if newSigner := strings.TrimSpace(signer); newSigner != "" {
+				newSigners = append(newSigners, newSigner)
+			}
 		}
-		for i, signer := range signers {
-			signers[i] = strings.TrimSpace(signer)
+		if len(newSigners) == 0 {
+			globalVar.Msg(common.Warn, "signers地址输入有误")
+			return
 		}
 
 		globalVar.Process.Set(0)
 
-		id, err := globalVar.Handler.CreateMultisig(context.TODO(), signers, strings.TrimSpace(pk.Text),
+		id, err := globalVar.Handler.CreateMultisig(context.TODO(), newSigners, strings.TrimSpace(pk.Text),
 			strings.TrimSpace(threshold.Text), strings.TrimSpace(duration.Text), strings.TrimSpace(initAmount.Text))
 		if err != nil {
 			globalVar.Msg(common.Warn, err.Error())
@@ -575,19 +578,22 @@ func changeWorker() fyne.CanvasObject {
 		}
 
 		controls := strings.Split(controls.Text, "\n")
-		if len(controls) == 0 {
-			globalVar.Msg(common.Warn, "成员地址输入有误")
-			return
+		newControls := make([]string, 0, len(controls))
+		for _, control := range controls {
+			if newControl := strings.TrimSpace(control); newControl != "" {
+				newControls = append(newControls, newControl)
+			}
 		}
-		for i, signer := range controls {
-			controls[i] = strings.TrimSpace(signer)
+		if len(newControls) == 0 {
+			globalVar.Msg(common.Warn, "controls地址输入有误")
+			return
 		}
 
 		globalVar.Process.Set(0)
 
 		proposal := &common.Proposal{ Msig: strings.TrimSpace(msig.Text) }
 		err := globalVar.Handler.ProposeChangeWorker(context.TODO(), strings.TrimSpace(pk.Text),
-			strings.TrimSpace(minerID.Text), strings.TrimSpace(worker.Text), controls, proposal)
+			strings.TrimSpace(minerID.Text), strings.TrimSpace(worker.Text), newControls, proposal)
 		if err != nil {
 			globalVar.Msg(common.Warn, err.Error())
 		} else {
