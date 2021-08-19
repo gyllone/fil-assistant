@@ -3,7 +3,9 @@ package common
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fil-assistant/lib"
+	"fil-assistant/utils"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/lotus/chain/actors"
@@ -11,6 +13,7 @@ import (
 	"github.com/filecoin-project/specs-actors/v6/actors/builtin"
 	init_ "github.com/filecoin-project/specs-actors/v6/actors/builtin/init"
 	"github.com/filecoin-project/specs-actors/v6/actors/builtin/multisig"
+	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
 	"strconv"
 )
@@ -18,6 +21,15 @@ import (
 type Proposal struct {
 	Msig string
 	TxnID string
+}
+
+type msigInfo struct {
+	ID 			int64 				`json:"提案号"`
+	To     		address.Address		`json:"接收方"`
+	Value  		abi.TokenAmount		`json:"金额"`
+	Method 		string				`json:"方法"`
+	Params 		cbg.CBORUnmarshaler	`json:"参数"`
+	Approved 	[]address.Address	`json:"已赞成signer"`
 }
 
 func (m *Handler) CreateMultisig(ctx context.Context, addresses []string, pk, threshold, duration,
@@ -370,4 +382,55 @@ func (m *Handler) propose(ctx context.Context, pki *types.KeyInfo, msig address.
 	} else {
 		return strconv.FormatInt(int64(retval.TxnID), 10), nil
 	}
+}
+
+func (m *Handler) GetPendingProposals(ctx context.Context, addr string) ([]byte, error) {
+	msigAddr, err := address.NewFromString(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	m.process(0.1)
+	trxs, err := m.client.GetPendingMsigTrxs(ctx, msigAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	base := 0.5 / float64(len(trxs))
+	var res bytes.Buffer
+	for i, trx := range trxs {
+		m.process(0.5 + float64(i) * base)
+		code, err := m.client.StateGetActorCode(ctx, trx.To)
+		if err != nil {
+			return nil, err
+		}
+
+		m, found := utils.MethodsMap[code][trx.Method]
+		if !found {
+			return nil, xerrors.Errorf("unknown method %d for actor %s", trx.Method, code)
+		}
+
+		if err = m.Params.UnmarshalCBOR(bytes.NewReader(trx.Params)); err != nil {
+			return nil, err
+		}
+
+		mi, err := json.Marshal(msigInfo{
+			ID: trx.ID,
+			To: trx.To,
+			Value: trx.Value,
+			Method: m.Name,
+			Params: m.Params,
+			Approved: trx.Approved,
+		})
+		if err != nil {
+			return nil, err
+		}
+		err = json.Indent(&res, mi, "", "\t")
+		if err != nil {
+			return nil, err
+		}
+		res.WriteByte('\n')
+	}
+
+	return res.Bytes(), nil
 }

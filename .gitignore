@@ -1,3 +1,5 @@
 .idea
 vendor
 *.exe
+*.txt
+config.toml

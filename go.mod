@@ -15,5 +15,6 @@ require (
 	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1
 	github.com/subchen/go-trylock v1.3.0
 	github.com/supranational/blst v0.3.4
+	github.com/whyrusleeping/cbor-gen v0.0.0-20210303213153-67a261a1d291
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )

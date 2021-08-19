@@ -16,6 +16,16 @@ type msgSendSpec struct {
 	MaxFee 	abi.TokenAmount
 }
 
+type MsigTransaction struct {
+	ID     int64
+	To     address.Address
+	Value  abi.TokenAmount
+	Method abi.MethodNum
+	Params []byte
+
+	Approved []address.Address
+}
+
 type MsgLookup struct {
 	Message   cid.Cid // Can be different than requested, in case it was replaced, but only gas values changed
 	Receipt   types.MessageReceipt
@@ -136,6 +146,26 @@ func (l *LotusClient) GetMinerAvailableBalance(ctx context.Context, minerID addr
 		return types.EmptyInt, xerrors.Errorf("GetMinerInfo error: %w", err)
 	} else {
 		return bal, nil
+	}
+}
+
+func (l *LotusClient) GetPendingMsigTrxs(ctx context.Context, msigAddr address.Address) ([]MsigTransaction, error) {
+	var trxs []MsigTransaction
+	err := l.client.CallContext(ctx, &trxs, "Filecoin.MsigGetPending", msigAddr, types.EmptyTSK)
+	if err != nil {
+		return nil, xerrors.Errorf("GetPendingMsigTrxs error: %w", err)
+	} else {
+		return trxs, nil
+	}
+}
+
+func (l *LotusClient) StateGetActorCode(ctx context.Context, actor address.Address) (cid.Cid, error) {
+	var act types.Actor
+	err := l.client.CallContext(ctx, &act, "Filecoin.StateGetActor", actor, types.EmptyTSK)
+	if err != nil {
+		return cid.Cid{}, xerrors.Errorf("StateGetActorCode error: %w", err)
+	} else {
+		return act.Code, nil
 	}
 }
 

@@ -7,8 +7,10 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"os"
 	"strings"
 )
 
@@ -26,14 +28,15 @@ func main() {
 
 	globalVar.Init(w)
 
-	tabs := make([]*container.TabItem, 4)
+	tabs := make([]*container.TabItem, 5)
 	tabs[0] = container.NewTabItem("创建多签账户", createMsig())
 	tabs[1] = container.NewTabItem("发起通用提案", generalProposals())
 	tabs[2] = container.NewTabItem("发起矿工提案", miningProposals())
 	tabs[3] = container.NewTabItem("赞成/反对提案", approveOrCancel())
+	tabs[4] = container.NewTabItem("查询待定提案", getProposals())
 
 	w.SetContent(container.NewVBox(Process(), container.NewAppTabs(tabs...)))
-	w.Resize(fyne.NewSize(800, 300))
+	w.Resize(fyne.NewSize(800, 0))
 	w.CenterOnScreen()
 	w.ShowAndRun()
 }
@@ -714,4 +717,44 @@ func approveOrCancel() fyne.CanvasObject {
 	mid := container.NewGridWithColumns(2, msig, txID)
 	bottom := container.NewGridWithColumns(2, approve, reject)
 	return container.NewVBox(pk, mid, bottom)
+}
+
+func getProposals() fyne.CanvasObject {
+	msig := widget.NewEntry()
+	msig.PlaceHolder = "多签账号"
+
+	query := widget.NewButton("查询", func() {
+		if !globalVar.Locker.TryLock(0) {
+			globalVar.Msg(common.Warn, "请稍后再试")
+			return
+		}
+		defer globalVar.Locker.Unlock()
+
+		if globalVar.Handler == nil {
+			globalVar.Msg(common.Error, "初始化异常")
+			return
+		}
+
+		if msig.Text == "" {
+			globalVar.Msg(common.Warn, "输入为空")
+			return
+		}
+
+		globalVar.Process.Set(0)
+
+		str, err := globalVar.Handler.GetPendingProposals(context.TODO(), strings.TrimSpace(msig.Text))
+		if err != nil {
+			globalVar.Msg(common.Warn, err.Error())
+			return
+		}
+
+		if err = os.WriteFile("./待定提案.txt", str, 0666); err != nil {
+			globalVar.Msg(common.Warn, err.Error())
+		} else {
+			globalVar.Msg(common.Info, "待定提案.txt 已生成")
+			globalVar.Process.Set(1)
+		}
+	})
+
+	return container.NewVBox(container.NewGridWithColumns(2, msig, query), layout.NewSpacer())
 }
